@@ -56,6 +56,7 @@ struct _FuDaemon {
 	GHashTable *sender_items; /* sender:FuDaemonSenderItem */
 #ifdef HAVE_POLKIT
 	PolkitAuthority *authority;
+	gboolean polkit_installed;
 #endif
 	FwupdStatus status; /* last emitted */
 	guint percentage;   /* last emitted */
@@ -455,7 +456,8 @@ fu_daemon_authorization_is_valid(PolkitAuthorizationResult *auth, GError **error
 	/* success */
 	return TRUE;
 }
-#else
+#endif /* HAVE_POLKIT */
+
 static gboolean
 fu_daemon_authorization_is_trusted(FuEngineRequest *request, GError **error)
 {
@@ -469,7 +471,6 @@ fu_daemon_authorization_is_trusted(FuEngineRequest *request, GError **error)
 	}
 	return TRUE;
 }
-#endif /* HAVE_POLKIT */
 
 static void
 fu_daemon_authorize_unlock_cb(GObject *source, GAsyncResult *res, gpointer user_data)
@@ -477,20 +478,21 @@ fu_daemon_authorize_unlock_cb(GObject *source, GAsyncResult *res, gpointer user_
 	g_autoptr(FuMainAuthHelper) helper = (FuMainAuthHelper *)user_data;
 	g_autoptr(GError) error = NULL;
 #ifdef HAVE_POLKIT
-	g_autoptr(PolkitAuthorizationResult) auth = NULL;
+	if (helper->self->polkit_installed) {
+		g_autoptr(PolkitAuthorizationResult) auth = NULL;
 
-	/* get result */
-	auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
-	if (!fu_daemon_authorization_is_valid(auth, &error)) {
-		g_dbus_method_invocation_return_gerror(helper->invocation, error);
-		return;
-	}
-#else
+		/* get result */
+		auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
+		if (!fu_daemon_authorization_is_valid(auth, &error)) {
+			g_dbus_method_invocation_return_gerror(helper->invocation, error);
+			return;
+		}
+	} else
+#endif /* HAVE_POLKIT */
 	if (!fu_daemon_authorization_is_trusted(helper->request, &error)) {
 		g_dbus_method_invocation_return_gerror(helper->invocation, error);
 		return;
 	}
-#endif /* HAVE_POLKIT */
 
 	/* authenticated */
 	if (!fu_engine_unlock(helper->self->engine, helper->device_id, &error)) {
@@ -511,20 +513,21 @@ fu_daemon_authorize_get_bios_settings_cb(GObject *source, GAsyncResult *res, gpo
 	FuContext *ctx;
 	GVariant *val = NULL;
 #ifdef HAVE_POLKIT
-	g_autoptr(PolkitAuthorizationResult) auth = NULL;
+	if (helper->self->polkit_installed) {
+		g_autoptr(PolkitAuthorizationResult) auth = NULL;
 
-	/* get result */
-	auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
-	if (!fu_daemon_authorization_is_valid(auth, &error)) {
-		g_dbus_method_invocation_return_gerror(helper->invocation, error);
-		return;
-	}
-#else
+		/* get result */
+		auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
+		if (!fu_daemon_authorization_is_valid(auth, &error)) {
+			g_dbus_method_invocation_return_gerror(helper->invocation, error);
+			return;
+		}
+	} else
+#endif /* HAVE_POLKIT */
 	if (!fu_daemon_authorization_is_trusted(helper->request, &error)) {
 		g_dbus_method_invocation_return_gerror(helper->invocation, error);
 		return;
 	}
-#endif /* HAVE_POLKIT */
 
 	/* authenticated */
 	ctx = fu_engine_get_context(helper->self->engine);
@@ -539,20 +542,21 @@ fu_daemon_authorize_set_bios_settings_cb(GObject *source, GAsyncResult *res, gpo
 	g_autoptr(FuMainAuthHelper) helper = (FuMainAuthHelper *)user_data;
 	g_autoptr(GError) error = NULL;
 #ifdef HAVE_POLKIT
-	g_autoptr(PolkitAuthorizationResult) auth = NULL;
+	if (helper->self->polkit_installed) {
+		g_autoptr(PolkitAuthorizationResult) auth = NULL;
 
-	/* get result */
-	auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
-	if (!fu_daemon_authorization_is_valid(auth, &error)) {
-		g_dbus_method_invocation_return_gerror(helper->invocation, error);
-		return;
-	}
-#else
+		/* get result */
+		auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
+		if (!fu_daemon_authorization_is_valid(auth, &error)) {
+			g_dbus_method_invocation_return_gerror(helper->invocation, error);
+			return;
+		}
+	} else
+#endif /* HAVE_POLKIT */
 	if (!fu_daemon_authorization_is_trusted(helper->request, &error)) {
 		g_dbus_method_invocation_return_gerror(helper->invocation, error);
 		return;
 	}
-#endif /* HAVE_POLKIT */
 
 	/* authenticated */
 	if (!fu_engine_modify_bios_settings(helper->self->engine,
@@ -572,20 +576,21 @@ fu_daemon_authorize_set_approved_firmware_cb(GObject *source, GAsyncResult *res,
 	g_autoptr(FuMainAuthHelper) helper = (FuMainAuthHelper *)user_data;
 	g_autoptr(GError) error = NULL;
 #ifdef HAVE_POLKIT
-	g_autoptr(PolkitAuthorizationResult) auth = NULL;
+	if (helper->self->polkit_installed) {
+		g_autoptr(PolkitAuthorizationResult) auth = NULL;
 
-	/* get result */
-	auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
-	if (!fu_daemon_authorization_is_valid(auth, &error)) {
-		g_dbus_method_invocation_return_gerror(helper->invocation, error);
-		return;
-	}
-#else
+		/* get result */
+		auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
+		if (!fu_daemon_authorization_is_valid(auth, &error)) {
+			g_dbus_method_invocation_return_gerror(helper->invocation, error);
+			return;
+		}
+	} else
+#endif /* HAVE_POLKIT */
 	if (!fu_daemon_authorization_is_trusted(helper->request, &error)) {
 		g_dbus_method_invocation_return_gerror(helper->invocation, error);
 		return;
 	}
-#endif /* HAVE_POLKIT */
 
 	/* success */
 	for (guint i = 0; i < helper->checksums->len; i++) {
@@ -601,20 +606,21 @@ fu_daemon_authorize_set_blocked_firmware_cb(GObject *source, GAsyncResult *res, 
 	g_autoptr(FuMainAuthHelper) helper = (FuMainAuthHelper *)user_data;
 	g_autoptr(GError) error = NULL;
 #ifdef HAVE_POLKIT
-	g_autoptr(PolkitAuthorizationResult) auth = NULL;
+	if (helper->self->polkit_installed) {
+		g_autoptr(PolkitAuthorizationResult) auth = NULL;
 
-	/* get result */
-	auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
-	if (!fu_daemon_authorization_is_valid(auth, &error)) {
-		g_dbus_method_invocation_return_gerror(helper->invocation, error);
-		return;
-	}
-#else
+		/* get result */
+		auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
+		if (!fu_daemon_authorization_is_valid(auth, &error)) {
+			g_dbus_method_invocation_return_gerror(helper->invocation, error);
+			return;
+		}
+	} else
+#endif /* HAVE_POLKIT */
 	if (!fu_daemon_authorization_is_trusted(helper->request, &error)) {
 		g_dbus_method_invocation_return_gerror(helper->invocation, error);
 		return;
 	}
-#endif /* HAVE_POLKIT */
 
 	/* success */
 	if (!fu_engine_set_blocked_firmware(helper->self->engine, helper->checksums, &error)) {
@@ -631,20 +637,21 @@ fu_daemon_authorize_self_sign_cb(GObject *source, GAsyncResult *res, gpointer us
 	g_autofree gchar *sig = NULL;
 	g_autoptr(GError) error = NULL;
 #ifdef HAVE_POLKIT
-	g_autoptr(PolkitAuthorizationResult) auth = NULL;
+	if (helper->self->polkit_installed) {
+		g_autoptr(PolkitAuthorizationResult) auth = NULL;
 
-	/* get result */
-	auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
-	if (!fu_daemon_authorization_is_valid(auth, &error)) {
-		g_dbus_method_invocation_return_gerror(helper->invocation, error);
-		return;
-	}
-#else
+		/* get result */
+		auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
+		if (!fu_daemon_authorization_is_valid(auth, &error)) {
+			g_dbus_method_invocation_return_gerror(helper->invocation, error);
+			return;
+		}
+	} else
+#endif /* HAVE_POLKIT */
 	if (!fu_daemon_authorization_is_trusted(helper->request, &error)) {
 		g_dbus_method_invocation_return_gerror(helper->invocation, error);
 		return;
 	}
-#endif /* HAVE_POLKIT */
 
 	/* authenticated */
 	sig = fu_engine_self_sign(helper->self->engine, helper->value, helper->flags, &error);
@@ -663,20 +670,21 @@ fu_daemon_modify_config_cb(GObject *source, GAsyncResult *res, gpointer user_dat
 	g_autoptr(FuMainAuthHelper) helper = (FuMainAuthHelper *)user_data;
 	g_autoptr(GError) error = NULL;
 #ifdef HAVE_POLKIT
-	g_autoptr(PolkitAuthorizationResult) auth = NULL;
+	if (helper->self->polkit_installed) {
+		g_autoptr(PolkitAuthorizationResult) auth = NULL;
 
-	/* get result */
-	auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
-	if (!fu_daemon_authorization_is_valid(auth, &error)) {
-		g_dbus_method_invocation_return_gerror(helper->invocation, error);
-		return;
-	}
-#else
+		/* get result */
+		auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
+		if (!fu_daemon_authorization_is_valid(auth, &error)) {
+			g_dbus_method_invocation_return_gerror(helper->invocation, error);
+			return;
+		}
+	} else
+#endif /* HAVE_POLKIT */
 	if (!fu_daemon_authorization_is_trusted(helper->request, &error)) {
 		g_dbus_method_invocation_return_gerror(helper->invocation, error);
 		return;
 	}
-#endif /* HAVE_POLKIT */
 
 	if (!fu_engine_modify_config(helper->self->engine, helper->key, helper->value, &error)) {
 		g_dbus_method_invocation_return_gerror(helper->invocation, error);
@@ -712,13 +720,15 @@ fu_daemon_authorize_activate_cb(GObject *source, GAsyncResult *res, gpointer use
 	g_autoptr(GError) error = NULL;
 	g_autoptr(FuProgress) progress = fu_progress_new(G_STRLOC);
 #ifdef HAVE_POLKIT
-	g_autoptr(PolkitAuthorizationResult) auth = NULL;
+	if (helper->self->polkit_installed) {
+		g_autoptr(PolkitAuthorizationResult) auth = NULL;
 
-	/* get result */
-	auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
-	if (!fu_daemon_authorization_is_valid(auth, &error)) {
-		g_dbus_method_invocation_return_gerror(helper->invocation, error);
-		return;
+		/* get result */
+		auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
+		if (!fu_daemon_authorization_is_valid(auth, &error)) {
+			g_dbus_method_invocation_return_gerror(helper->invocation, error);
+			return;
+		}
 	}
 #endif /* HAVE_POLKIT */
 
@@ -750,20 +760,21 @@ fu_daemon_authorize_verify_update_cb(GObject *source, GAsyncResult *res, gpointe
 	g_autoptr(GError) error = NULL;
 	g_autoptr(FuProgress) progress = fu_progress_new(G_STRLOC);
 #ifdef HAVE_POLKIT
-	g_autoptr(PolkitAuthorizationResult) auth = NULL;
+	if (helper->self->polkit_installed) {
+		g_autoptr(PolkitAuthorizationResult) auth = NULL;
 
-	/* get result */
-	auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
-	if (!fu_daemon_authorization_is_valid(auth, &error)) {
-		g_dbus_method_invocation_return_gerror(helper->invocation, error);
-		return;
-	}
-#else
+		/* get result */
+		auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
+		if (!fu_daemon_authorization_is_valid(auth, &error)) {
+			g_dbus_method_invocation_return_gerror(helper->invocation, error);
+			return;
+		}
+	} else
+#endif /* HAVE_POLKIT */
 	if (!fu_daemon_authorization_is_trusted(helper->request, &error)) {
 		g_dbus_method_invocation_return_gerror(helper->invocation, error);
 		return;
 	}
-#endif /* HAVE_POLKIT */
 
 	/* progress */
 	fu_progress_set_profile(progress, g_getenv("FWUPD_VERBOSE") != NULL);
@@ -792,20 +803,21 @@ fu_daemon_authorize_modify_remote_cb(GObject *source, GAsyncResult *res, gpointe
 	g_autoptr(FuMainAuthHelper) helper = (FuMainAuthHelper *)user_data;
 	g_autoptr(GError) error = NULL;
 #ifdef HAVE_POLKIT
-	g_autoptr(PolkitAuthorizationResult) auth = NULL;
+	if (helper->self->polkit_installed) {
+		g_autoptr(PolkitAuthorizationResult) auth = NULL;
 
-	/* get result */
-	auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
-	if (!fu_daemon_authorization_is_valid(auth, &error)) {
-		g_dbus_method_invocation_return_gerror(helper->invocation, error);
-		return;
-	}
-#else
+		/* get result */
+		auth = polkit_authority_check_authorization_finish(POLKIT_AUTHORITY(source), res, &error);
+		if (!fu_daemon_authorization_is_valid(auth, &error)) {
+			g_dbus_method_invocation_return_gerror(helper->invocation, error);
+			return;
+		}
+	} else
+#endif /* HAVE_POLKIT */
 	if (!fu_daemon_authorization_is_trusted(helper->request, &error)) {
 		g_dbus_method_invocation_return_gerror(helper->invocation, error);
 		return;
 	}
-#endif /* HAVE_POLKIT */
 
 	/* authenticated */
 	if (!fu_engine_modify_remote(helper->self->engine,
@@ -855,20 +867,25 @@ fu_daemon_authorize_install_queue(FuMainAuthHelper *helper_ref)
 	gboolean ret;
 
 #ifdef HAVE_POLKIT
-	/* still more things to to authenticate */
-	if (helper->action_ids->len > 0) {
-		g_autofree gchar *action_id = g_strdup(g_ptr_array_index(helper->action_ids, 0));
-		g_autoptr(PolkitSubject) subject = g_object_ref(helper->subject);
-		g_ptr_array_remove_index(helper->action_ids, 0);
-		polkit_authority_check_authorization(
-		    self->authority,
-		    subject,
-		    action_id,
-		    NULL,
-		    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
-		    NULL,
-		    fu_daemon_authorize_install_cb,
-		    g_steal_pointer(&helper));
+	if (self->polkit_installed) {
+		/* still more things to to authenticate */
+		if (helper->action_ids->len > 0) {
+			g_autofree gchar *action_id = g_strdup(g_ptr_array_index(helper->action_ids, 0));
+			g_autoptr(PolkitSubject) subject = g_object_ref(helper->subject);
+			g_ptr_array_remove_index(helper->action_ids, 0);
+			polkit_authority_check_authorization(
+			    self->authority,
+			    subject,
+			    action_id,
+			    NULL,
+			    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+			    NULL,
+			    fu_daemon_authorize_install_cb,
+			    g_steal_pointer(&helper));
+			return;
+		}
+	} else if (!fu_daemon_authorization_is_trusted(self, &error)) {
+		g_dbus_method_invocation_return_gerror(helper->invocation, error);
 		return;
 	}
 #endif /* HAVE_POLKIT */
@@ -1290,8 +1307,6 @@ fu_daemon_daemon_method_call(GDBusConnection *connection,
 		checksums_str = g_strjoinv(",", checksums);
 		g_debug("Called %s(%s)", method_name, checksums_str);
 
-		/* authenticate */
-		fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
 		helper = g_new0(FuMainAuthHelper, 1);
 		helper->self = self;
 		helper->flags = FWUPD_INSTALL_FLAG_NO_SEARCH;
@@ -1301,19 +1316,22 @@ fu_daemon_daemon_method_call(GDBusConnection *connection,
 		for (guint i = 0; checksums[i] != NULL; i++)
 			g_ptr_array_add(helper->checksums, g_strdup(checksums[i]));
 #ifdef HAVE_POLKIT
-		subject = polkit_system_bus_name_new(sender);
-		polkit_authority_check_authorization(
-		    self->authority,
-		    subject,
-		    "org.freedesktop.fwupd.set-approved-firmware",
-		    NULL,
-		    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
-		    NULL,
-		    fu_daemon_authorize_set_approved_firmware_cb,
-		    g_steal_pointer(&helper));
-#else
-		fu_daemon_authorize_set_approved_firmware_cb(NULL, NULL, g_steal_pointer(&helper));
+		if (self->polkit_installed) {
+			/* authenticate */
+			fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
+			subject = polkit_system_bus_name_new(sender);
+			polkit_authority_check_authorization(
+			    self->authority,
+			    subject,
+			    "org.freedesktop.fwupd.set-approved-firmware",
+			    NULL,
+			    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+			    NULL,
+			    fu_daemon_authorize_set_approved_firmware_cb,
+			    g_steal_pointer(&helper));
+		} else
 #endif /* HAVE_POLKIT */
+		fu_daemon_authorize_set_approved_firmware_cb(NULL, NULL, g_steal_pointer(&helper));
 		return;
 	}
 	if (g_strcmp0(method_name, "SetBlockedFirmware") == 0) {
@@ -1327,8 +1345,6 @@ fu_daemon_daemon_method_call(GDBusConnection *connection,
 		checksums_str = g_strjoinv(",", checksums);
 		g_debug("Called %s(%s)", method_name, checksums_str);
 
-		/* authenticate */
-		fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
 		helper = g_new0(FuMainAuthHelper, 1);
 		helper->self = self;
 		helper->request = g_steal_pointer(&request);
@@ -1337,19 +1353,22 @@ fu_daemon_daemon_method_call(GDBusConnection *connection,
 		for (guint i = 0; checksums[i] != NULL; i++)
 			g_ptr_array_add(helper->checksums, g_strdup(checksums[i]));
 #ifdef HAVE_POLKIT
-		subject = polkit_system_bus_name_new(sender);
-		polkit_authority_check_authorization(
-		    self->authority,
-		    subject,
-		    "org.freedesktop.fwupd.set-approved-firmware",
-		    NULL,
-		    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
-		    NULL,
-		    fu_daemon_authorize_set_blocked_firmware_cb,
-		    g_steal_pointer(&helper));
-#else
-		fu_daemon_authorize_set_blocked_firmware_cb(NULL, NULL, g_steal_pointer(&helper));
+		if (self->polkit_installed) {
+			/* authenticate */
+			fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
+			subject = polkit_system_bus_name_new(sender);
+			polkit_authority_check_authorization(
+			    self->authority,
+			    subject,
+			    "org.freedesktop.fwupd.set-approved-firmware",
+			    NULL,
+			    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+			    NULL,
+			    fu_daemon_authorize_set_blocked_firmware_cb,
+			    g_steal_pointer(&helper));
+		} else
 #endif /* HAVE_POLKIT */
+		fu_daemon_authorize_set_blocked_firmware_cb(NULL, NULL, g_steal_pointer(&helper));
 		return;
 	}
 	if (g_strcmp0(method_name, "Quit") == 0) {
@@ -1390,26 +1409,27 @@ fu_daemon_daemon_method_call(GDBusConnection *connection,
 			g_variant_unref(prop_value);
 		}
 
-		/* authenticate */
-		fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
 		helper->self = self;
 		helper->value = g_steal_pointer(&value);
 		helper->request = g_steal_pointer(&request);
 		helper->invocation = g_object_ref(invocation);
 #ifdef HAVE_POLKIT
-		subject = polkit_system_bus_name_new(sender);
-		polkit_authority_check_authorization(
-		    self->authority,
-		    subject,
-		    "org.freedesktop.fwupd.self-sign",
-		    NULL,
-		    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
-		    NULL,
-		    fu_daemon_authorize_self_sign_cb,
-		    g_steal_pointer(&helper));
-#else
-		fu_daemon_authorize_self_sign_cb(NULL, NULL, g_steal_pointer(&helper));
+		if (self->polkit_installed) {
+			/* authenticate */
+			fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
+			subject = polkit_system_bus_name_new(sender);
+			polkit_authority_check_authorization(
+			    self->authority,
+			    subject,
+			    "org.freedesktop.fwupd.self-sign",
+			    NULL,
+			    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+			    NULL,
+			    fu_daemon_authorize_self_sign_cb,
+			    g_steal_pointer(&helper));
+		} else
 #endif /* HAVE_POLKIT */
+		fu_daemon_authorize_self_sign_cb(NULL, NULL, g_steal_pointer(&helper));
 		return;
 	}
 	if (g_strcmp0(method_name, "GetDowngrades") == 0) {
@@ -1620,27 +1640,28 @@ fu_daemon_daemon_method_call(GDBusConnection *connection,
 			return;
 		}
 
-		/* authenticate */
-		fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
 		helper = g_new0(FuMainAuthHelper, 1);
 		helper->self = self;
 		helper->request = g_steal_pointer(&request);
 		helper->invocation = g_object_ref(invocation);
 		helper->device_id = g_strdup(device_id);
 #ifdef HAVE_POLKIT
-		subject = polkit_system_bus_name_new(sender);
-		polkit_authority_check_authorization(
-		    self->authority,
-		    subject,
-		    "org.freedesktop.fwupd.device-unlock",
-		    NULL,
-		    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
-		    NULL,
-		    fu_daemon_authorize_unlock_cb,
-		    g_steal_pointer(&helper));
-#else
-		fu_daemon_authorize_unlock_cb(NULL, NULL, g_steal_pointer(&helper));
+		if (self->polkit_installed) {
+			/* authenticate */
+			fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
+			subject = polkit_system_bus_name_new(sender);
+			polkit_authority_check_authorization(
+			    self->authority,
+			    subject,
+			    "org.freedesktop.fwupd.device-unlock",
+			    NULL,
+			    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+			    NULL,
+			    fu_daemon_authorize_unlock_cb,
+			    g_steal_pointer(&helper));
+		} else
 #endif /* HAVE_POLKIT */
+		fu_daemon_authorize_unlock_cb(NULL, NULL, g_steal_pointer(&helper));
 		return;
 	}
 	if (g_strcmp0(method_name, "Activate") == 0) {
@@ -1656,27 +1677,28 @@ fu_daemon_daemon_method_call(GDBusConnection *connection,
 			return;
 		}
 
-		/* authenticate */
-		fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
 		helper = g_new0(FuMainAuthHelper, 1);
 		helper->self = self;
 		helper->request = g_steal_pointer(&request);
 		helper->invocation = g_object_ref(invocation);
 		helper->device_id = g_strdup(device_id);
 #ifdef HAVE_POLKIT
-		subject = polkit_system_bus_name_new(sender);
-		polkit_authority_check_authorization(
-		    self->authority,
-		    subject,
-		    "org.freedesktop.fwupd.device-activate",
-		    NULL,
-		    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
-		    NULL,
-		    fu_daemon_authorize_activate_cb,
-		    g_steal_pointer(&helper));
-#else
-		fu_daemon_authorize_activate_cb(NULL, NULL, g_steal_pointer(&helper));
+		if (self->polkit_installed) {
+			/* authenticate */
+			fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
+			subject = polkit_system_bus_name_new(sender);
+			polkit_authority_check_authorization(
+			    self->authority,
+			    subject,
+			    "org.freedesktop.fwupd.device-activate",
+			    NULL,
+			    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+			    NULL,
+			    fu_daemon_authorize_activate_cb,
+			    g_steal_pointer(&helper));
+		} else
 #endif /* HAVE_POLKIT */
+		fu_daemon_authorize_activate_cb(NULL, NULL, g_steal_pointer(&helper));
 		return;
 	}
 	if (g_strcmp0(method_name, "ModifyConfig") == 0) {
@@ -1697,19 +1719,20 @@ fu_daemon_daemon_method_call(GDBusConnection *connection,
 		helper->request = g_steal_pointer(&request);
 		helper->invocation = g_object_ref(invocation);
 #ifdef HAVE_POLKIT
-		subject = polkit_system_bus_name_new(sender);
-		polkit_authority_check_authorization(
-		    self->authority,
-		    subject,
-		    "org.freedesktop.fwupd.modify-config",
-		    NULL,
-		    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
-		    NULL,
-		    fu_daemon_modify_config_cb,
-		    g_steal_pointer(&helper));
-#else
-		fu_daemon_modify_config_cb(NULL, NULL, g_steal_pointer(&helper));
+		if (self->polkit_installed) {
+			subject = polkit_system_bus_name_new(sender);
+			polkit_authority_check_authorization(
+			    self->authority,
+			    subject,
+			    "org.freedesktop.fwupd.modify-config",
+			    NULL,
+			    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+			    NULL,
+			    fu_daemon_modify_config_cb,
+			    g_steal_pointer(&helper));
+		} else
 #endif /* HAVE_POLKIT */
+		fu_daemon_modify_config_cb(NULL, NULL, g_steal_pointer(&helper));
 		return;
 	}
 	if (g_strcmp0(method_name, "ModifyRemote") == 0) {
@@ -1733,22 +1756,23 @@ fu_daemon_daemon_method_call(GDBusConnection *connection,
 		helper->value = g_strdup(value);
 		helper->self = self;
 
-		/* authenticate */
-		fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
 #ifdef HAVE_POLKIT
-		subject = polkit_system_bus_name_new(sender);
-		polkit_authority_check_authorization(
-		    self->authority,
-		    subject,
-		    "org.freedesktop.fwupd.modify-remote",
-		    NULL,
-		    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
-		    NULL,
-		    fu_daemon_authorize_modify_remote_cb,
-		    g_steal_pointer(&helper));
-#else
-		fu_daemon_authorize_modify_remote_cb(NULL, NULL, g_steal_pointer(&helper));
+		if (self->polkit_installed) {
+			/* authenticate */
+			fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
+			subject = polkit_system_bus_name_new(sender);
+			polkit_authority_check_authorization(
+			    self->authority,
+			    subject,
+			    "org.freedesktop.fwupd.modify-remote",
+			    NULL,
+			    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+			    NULL,
+			    fu_daemon_authorize_modify_remote_cb,
+			    g_steal_pointer(&helper));
+		} else
 #endif /* HAVE_POLKIT */
+		fu_daemon_authorize_modify_remote_cb(NULL, NULL, g_steal_pointer(&helper));
 		return;
 	}
 	if (g_strcmp0(method_name, "VerifyUpdate") == 0) {
@@ -1773,22 +1797,23 @@ fu_daemon_daemon_method_call(GDBusConnection *connection,
 		helper->device_id = g_strdup(device_id);
 		helper->self = self;
 
-		/* authenticate */
 #ifdef HAVE_POLKIT
-		fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
-		subject = polkit_system_bus_name_new(sender);
-		polkit_authority_check_authorization(
-		    self->authority,
-		    subject,
-		    "org.freedesktop.fwupd.verify-update",
-		    NULL,
-		    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
-		    NULL,
-		    fu_daemon_authorize_verify_update_cb,
-		    g_steal_pointer(&helper));
-#else
-		fu_daemon_authorize_verify_update_cb(NULL, NULL, g_steal_pointer(&helper));
+		if (self->polkit_installed) {
+			/* authenticate */
+			fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
+			subject = polkit_system_bus_name_new(sender);
+			polkit_authority_check_authorization(
+			    self->authority,
+			    subject,
+			    "org.freedesktop.fwupd.verify-update",
+			    NULL,
+			    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+			    NULL,
+			    fu_daemon_authorize_verify_update_cb,
+			    g_steal_pointer(&helper));
+		} else
 #endif /* HAVE_POLKIT */
+		fu_daemon_authorize_verify_update_cb(NULL, NULL, g_steal_pointer(&helper));
 		return;
 	}
 	if (g_strcmp0(method_name, "Verify") == 0) {
@@ -2009,28 +2034,29 @@ fu_daemon_daemon_method_call(GDBusConnection *connection,
 #ifdef HAVE_POLKIT
 			g_autoptr(PolkitSubject) subject = NULL;
 #endif
-			/* authenticate */
-			fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
 			helper = g_new0(FuMainAuthHelper, 1);
 			helper->self = self;
 			helper->request = g_steal_pointer(&request);
 			helper->invocation = g_object_ref(invocation);
 #ifdef HAVE_POLKIT
-			subject = polkit_system_bus_name_new(sender);
-			polkit_authority_check_authorization(
-			    self->authority,
-			    subject,
-			    "org.freedesktop.fwupd.get-bios-settings",
-			    NULL,
-			    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
-			    NULL,
-			    fu_daemon_authorize_get_bios_settings_cb,
-			    g_steal_pointer(&helper));
-#else
+			if (self->polkit_installed) {
+				/* authenticate */
+				fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
+				subject = polkit_system_bus_name_new(sender);
+				polkit_authority_check_authorization(
+				    self->authority,
+				    subject,
+				    "org.freedesktop.fwupd.get-bios-settings",
+				    NULL,
+				    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+				    NULL,
+				    fu_daemon_authorize_get_bios_settings_cb,
+				    g_steal_pointer(&helper));
+			} else
+#endif /* HAVE_POLKIT */
 			fu_daemon_authorize_get_bios_settings_cb(NULL,
 								 NULL,
 								 g_steal_pointer(&helper));
-#endif /* HAVE_POLKIT */
 		}
 		return;
 	}
@@ -2046,8 +2072,6 @@ fu_daemon_daemon_method_call(GDBusConnection *connection,
 		g_variant_get(parameters, "(a{ss})", &iter);
 		g_debug("Called %s()", method_name);
 
-		/* authenticate */
-		fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
 		helper = g_new0(FuMainAuthHelper, 1);
 		helper->self = self;
 		helper->request = g_steal_pointer(&request);
@@ -2059,19 +2083,22 @@ fu_daemon_daemon_method_call(GDBusConnection *connection,
 			g_hash_table_insert(helper->bios_settings, g_strdup(key), g_strdup(value));
 		}
 #ifdef HAVE_POLKIT
-		subject = polkit_system_bus_name_new(sender);
-		polkit_authority_check_authorization(
-		    self->authority,
-		    subject,
-		    "org.freedesktop.fwupd.set-bios-settings",
-		    NULL,
-		    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
-		    NULL,
-		    fu_daemon_authorize_set_bios_settings_cb,
-		    g_steal_pointer(&helper));
-#else
-		fu_daemon_authorize_set_bios_settings_cb(NULL, NULL, g_steal_pointer(&helper));
+		if (self->polkit_installed) {
+			/* authenticate */
+			fu_daemon_set_status(self, FWUPD_STATUS_WAITING_FOR_AUTH);
+			subject = polkit_system_bus_name_new(sender);
+			polkit_authority_check_authorization(
+			    self->authority,
+			    subject,
+			    "org.freedesktop.fwupd.set-bios-settings",
+			    NULL,
+			    POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+			    NULL,
+			    fu_daemon_authorize_set_bios_settings_cb,
+			    g_steal_pointer(&helper));
+		} else
 #endif /* HAVE_POLKIT */
+		fu_daemon_authorize_set_bios_settings_cb(NULL, NULL, g_steal_pointer(&helper));
 
 		return;
 	}
@@ -2190,6 +2217,71 @@ fu_daemon_register_object(FuDaemon *self)
 	g_assert(registration_id > 0);
 }
 
+static gboolean
+fu_daemon_is_polkit_installed(FuDaemon *self) {
+	g_autoptr(GError) error = NULL;
+	g_autoptr(GDBusProxy) dbus_proxy = NULL;
+	g_autoptr(GVariant) owner_value = NULL;
+	g_autoptr(GVariant) activatable_value = NULL;
+	gsize n_activitable;
+
+	dbus_proxy = g_dbus_proxy_new_sync(self->connection,
+					   G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES |
+					   G_DBUS_PROXY_FLAGS_DO_NOT_CONNECT_SIGNALS,
+					   NULL,
+					   "org.freedesktop.DBus",
+					   "/org/freedesktop/DBus",
+					   "org.freedesktop.DBus",
+					   NULL,
+					   &error);
+	if (dbus_proxy == NULL) {
+		g_warning("Cannot contact DBus: %s", error->message);
+		return FALSE;
+	}
+
+	owner_value = g_dbus_proxy_call_sync(dbus_proxy,
+					     "GetNameOwner",
+					     g_variant_new("(s)", "org.freedesktop.PolicyKit1"),
+					     G_DBUS_CALL_FLAGS_NONE,
+					     2000,
+					     NULL,
+					     &error);
+	if ((owner_value != NULL) && (g_variant_is_of_type(owner_value, G_VARIANT_TYPE("(s)")))) {
+		g_debug("PolicyKit is running");
+		return TRUE;
+	}
+
+	activatable_value = g_dbus_proxy_call_sync(dbus_proxy,
+						   "ListActivatableNames",
+						   NULL,
+						   G_DBUS_CALL_FLAGS_NONE,
+						   2000,
+						   NULL,
+						   &error);
+	if (activatable_value == NULL) {
+		g_warning("Error from ListActivatableNames: %s", error->message);
+		return FALSE;
+	}
+	if (!g_variant_is_container(activatable_value)) {
+		g_warning("Unexpected answer for ListActivatableNames");
+		return FALSE;
+	}
+
+	n_activitable = g_variant_n_children(activatable_value);
+	for (gsize i = 0; i < n_activitable; i++) {
+		const gchar *name;
+		GVariant* child = g_variant_get_child_value(activatable_value, i);
+		g_variant_get(child, "(&s)", &name);
+		if (strcmp(name, "org.freedesktop.PolicyKit1") == 0) {
+			g_debug("PolicyKit is activatable");
+			return TRUE;
+		}
+	}
+
+	g_debug("PolicyKit is not installed");
+	return FALSE;
+}
+
 static void
 fu_daemon_dbus_bus_acquired_cb(GDBusConnection *connection, const gchar *name, gpointer user_data)
 {
@@ -2213,6 +2305,8 @@ fu_daemon_dbus_bus_acquired_cb(GDBusConnection *connection, const gchar *name, g
 		g_warning("cannot connect to DBus: %s", error->message);
 		return;
 	}
+
+	self->polkit_installed = fu_daemon_is_polkit_installed(self);
 }
 
 static void
@@ -2367,6 +2461,7 @@ fu_daemon_setup(FuDaemon *self, const gchar *socket_address, GError **error)
 		return FALSE;
 	}
 	fu_progress_step_done(progress);
+	self->polkit_installed = TRUE;
 #endif
 
 	/* own the object */
